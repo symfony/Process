@@ -81,6 +81,10 @@ class PhpExecutableFinder
             $dirs[] = 'C:\xampp\php\\';
         }
 
+        if ($herdPath = getenv('HERD_HOME')) {
+            $dirs[] = $herdPath . ('\\' === \DIRECTORY_SEPARATOR ? '\\bin' : '/bin');
+        }
+
         return $this->executableFinder->find('php', false, $dirs);
     }
 
