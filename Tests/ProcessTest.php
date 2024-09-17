@@ -63,7 +63,7 @@ class ProcessTest extends TestCase
             $this->fail($e);
         }
 
-        $cmd = new Process(['echo', 'test'], __DIR__.'/notfound/');
+        $cmd = new Process(['echo', 'test'], __DIR__ . '/notfound/');
         $cmd->run();
     }
 
@@ -129,7 +129,7 @@ class ProcessTest extends TestCase
      */
     public function testStopWithTimeoutIsActuallyWorking()
     {
-        $p = $this->getProcess([self::$phpBin, __DIR__.'/NonStopableProcess.php', 30]);
+        $p = $this->getProcess([self::$phpBin, __DIR__ . '/NonStopableProcess.php', 30]);
         $p->start();
 
         while ($p->isRunning() && !str_contains($p->getOutput(), 'received')) {
@@ -137,7 +137,7 @@ class ProcessTest extends TestCase
         }
 
         if (!$p->isRunning()) {
-            throw new \LogicException('Process is not running: '.$p->getErrorOutput());
+            throw new \LogicException('Process is not running: ' . $p->getErrorOutput());
         }
 
         $start = microtime(true);
@@ -153,7 +153,7 @@ class ProcessTest extends TestCase
      */
     public function testWaitUntilSpecificOutput()
     {
-        $p = $this->getProcess([self::$phpBin, __DIR__.'/KillableProcessWithOutput.php']);
+        $p = $this->getProcess([self::$phpBin, __DIR__ . '/KillableProcessWithOutput.php']);
         $p->start();
 
         $start = microtime(true);
@@ -172,7 +172,7 @@ class ProcessTest extends TestCase
     {
         $p = $this->getProcess('echo foo');
         $p->start();
-        $this->assertFalse($p->waitUntil(fn () => false));
+        $this->assertFalse($p->waitUntil(fn() => false));
     }
 
     public function testAllOutputIsActuallyReadOnTermination()
@@ -215,7 +215,7 @@ class ProcessTest extends TestCase
 
         $process->wait();
 
-        $this->assertSame('foo'.\PHP_EOL, $data);
+        $this->assertSame('foo' . \PHP_EOL, $data);
     }
 
     public function testReadSupportIsDisabledWithoutCallback()
@@ -252,7 +252,7 @@ class ProcessTest extends TestCase
      */
     public function testProcessPipes($code, $size)
     {
-        $expected = str_repeat(str_repeat('*', 1024), $size).'!';
+        $expected = str_repeat(str_repeat('*', 1024), $size) . '!';
         $expectedLength = (1024 * $size) + 1;
 
         $p = $this->getProcessForCode($code);
@@ -268,7 +268,7 @@ class ProcessTest extends TestCase
      */
     public function testSetStreamAsInput($code, $size)
     {
-        $expected = str_repeat(str_repeat('*', 1024), $size).'!';
+        $expected = str_repeat(str_repeat('*', 1024), $size) . '!';
         $expectedLength = (1024 * $size) + 1;
 
         $stream = fopen('php://temporary', 'w+');
@@ -433,7 +433,7 @@ class ProcessTest extends TestCase
     {
         $lock = tempnam(sys_get_temp_dir(), __FUNCTION__);
 
-        $p = $this->getProcessForCode('file_put_contents($s = \''.$uri.'\', \'foo\'); flock(fopen('.var_export($lock, true).', \'r\'), LOCK_EX); file_put_contents($s, \'bar\');');
+        $p = $this->getProcessForCode('file_put_contents($s = \'' . $uri . '\', \'foo\'); flock(fopen(' . var_export($lock, true) . ', \'r\'), LOCK_EX); file_put_contents($s, \'bar\');');
 
         $h = fopen($lock, 'w');
         flock($h, \LOCK_EX);
@@ -515,7 +515,7 @@ class ProcessTest extends TestCase
             $this->markTestSkipped('There is no TTY support');
         }
 
-        $process = $this->getProcess('echo "foo" >> /dev/null && '.$this->getProcessForCode('usleep(100000);')->getCommandLine());
+        $process = $this->getProcess('echo "foo" >> /dev/null && ' . $this->getProcessForCode('usleep(100000);')->getCommandLine());
         $process->setTty(true);
         $process->start();
         $this->assertTrue($process->isRunning());
@@ -579,7 +579,7 @@ class ProcessTest extends TestCase
         $process = $this->getProcess('echo foo');
 
         $this->assertSame($process, $process->mustRun());
-        $this->assertEquals('foo'.\PHP_EOL, $process->getOutput());
+        $this->assertEquals('foo' . \PHP_EOL, $process->getOutput());
     }
 
     public function testSuccessfulMustRunHasCorrectExitCode()
@@ -938,7 +938,7 @@ class ProcessTest extends TestCase
      */
     public function testSignal()
     {
-        $process = $this->getProcess([self::$phpBin, __DIR__.'/SignalListener.php']);
+        $process = $this->getProcess([self::$phpBin, __DIR__ . '/SignalListener.php']);
         $process->start();
 
         while (!str_contains($process->getOutput(), 'Caught')) {
@@ -1189,7 +1189,7 @@ class ProcessTest extends TestCase
     {
         $variations = [
             'fwrite(STDOUT, $in = file_get_contents(\'php://stdin\')); fwrite(STDERR, $in);',
-            'include \''.__DIR__.'/PipeStdinInStdoutStdErrStreamSelect.php\';',
+            'include \'' . __DIR__ . '/PipeStdinInStdoutStdErrStreamSelect.php\';',
         ];
 
         if ('\\' === \DIRECTORY_SEPARATOR) {
@@ -1214,7 +1214,7 @@ class ProcessTest extends TestCase
      */
     public function testIncrementalOutputDoesNotRequireAnotherCall($stream, $method)
     {
-        $process = $this->getProcessForCode('$n = 0; while ($n < 3) { file_put_contents(\''.$stream.'\', $n, 1); $n++; usleep(1000); }', null, null, null, null);
+        $process = $this->getProcessForCode('$n = 0; while ($n < 3) { file_put_contents(\'' . $stream . '\', $n, 1); $n++; usleep(1000); }', null, null, null, null);
         $process->start();
         $result = '';
         $limit = microtime(true) + 3;
@@ -1318,7 +1318,9 @@ class ProcessTest extends TestCase
     {
         $i = 0;
         $input = new InputStream();
-        $input->onEmpty(function () use (&$i) { ++$i; });
+        $input->onEmpty(function () use (&$i) {
+            ++$i;
+        });
 
         $process = $this->getProcessForCode('echo 123; echo fread(STDIN, 1); echo 456;');
         $process->setInput($input);
@@ -1427,7 +1429,7 @@ class ProcessTest extends TestCase
 
         $process->run();
 
-        $this->assertSame('hello'.\PHP_EOL, $process->getOutput());
+        $this->assertSame('hello' . \PHP_EOL, $process->getOutput());
         $this->assertSame('', $process->getErrorOutput());
     }
 
@@ -1568,13 +1570,13 @@ class ProcessTest extends TestCase
 
     public function testWaitStoppedDeadProcess()
     {
-        $process = $this->getProcess(self::$phpBin.' '.__DIR__.'/ErrorProcessInitiator.php -e '.self::$phpBin);
+        $process = $this->getProcess(self::$phpBin . ' ' . __DIR__ . '/ErrorProcessInitiator.php -e ' . self::$phpBin);
         $process->start();
         $process->setTimeout(2);
         $process->wait();
         $this->assertFalse($process->isRunning());
 
-        if ('\\' !== \DIRECTORY_SEPARATOR && !\Closure::bind(fn () => $this->isSigchildEnabled(), $process, $process)()) {
+        if ('\\' !== \DIRECTORY_SEPARATOR && !\Closure::bind(fn() => $this->isSigchildEnabled(), $process, $process)()) {
             $this->assertSame(0, $process->getExitCode());
         }
     }
@@ -1705,8 +1707,26 @@ class ProcessTest extends TestCase
     {
         return $this->getProcess([self::$phpBin, '-r', $code], $cwd, $env, $input, $timeout);
     }
+    public function testGetLogs()
+    {
+        $process = new Process(['ls', '-la']);
+        $process->run();
+        $logs = $process->getLogs();
+
+        $this->assertNotEmpty($logs, 'Logs should not be empty after running the process.');
+        $this->assertStringContainsString('Process started.', $logs[0], 'First log should indicate process start.');
+        $this->assertStringContainsString('Process ended.', end($logs), 'Last log should indicate process end.');
+    }
+
+    public function testClearLogs()
+    {
+        $process = new Process(['ls', '-la']);
+        $process->run();
+        $process->clearLogs();
+        $logs = $process->getLogs();
+
+        $this->assertEmpty($logs, 'Logs should be empty after clearing.');
+    }
 }
 
-class NonStringifiable
-{
-}
+class NonStringifiable {}

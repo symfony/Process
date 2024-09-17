@@ -134,6 +134,9 @@ class Process implements \IteratorAggregate
         159 => 'Bad syscall',
     ];
 
+    private $logger;
+
+
     /**
      * @param array          $command The command to run and its arguments listed as separate entries
      * @param string|null    $cwd     The working directory or null to use the working dir of the current PHP process
@@ -166,6 +169,7 @@ class Process implements \IteratorAggregate
         $this->setInput($input);
         $this->setTimeout($timeout);
         $this->pty = false;
+        $this->logger = new Logger();
     }
 
     /**
@@ -199,12 +203,12 @@ class Process implements \IteratorAggregate
 
     public function __sleep(): array
     {
-        throw new \BadMethodCallException('Cannot serialize '.__CLASS__);
+        throw new \BadMethodCallException('Cannot serialize ' . __CLASS__);
     }
 
     public function __wakeup(): void
     {
-        throw new \BadMethodCallException('Cannot unserialize '.__CLASS__);
+        throw new \BadMethodCallException('Cannot unserialize ' . __CLASS__);
     }
 
     public function __destruct()
@@ -246,6 +250,8 @@ class Process implements \IteratorAggregate
      */
     public function run(?callable $callback = null, array $env = []): int
     {
+        $this->logger->info("Process started.");
+
         $this->start($callback, $env);
 
         return $this->wait();
@@ -322,18 +328,18 @@ class Process implements \IteratorAggregate
 
             if (\is_array($commandline)) {
                 // exec is mandatory to deal with sending a signal to the process
-                $commandline = 'exec '.$this->buildShellCommandline($commandline);
+                $commandline = 'exec ' . $this->buildShellCommandline($commandline);
             }
 
             // See https://unix.stackexchange.com/questions/71205/background-process-pipe-input
-            $commandline = '{ ('.$commandline.') <&3 3<&- 3>/dev/null & } 3<&0;';
+            $commandline = '{ (' . $commandline . ') <&3 3<&- 3>/dev/null & } 3<&0;';
             $commandline .= 'pid=$!; echo $pid >&3; wait $pid 2>/dev/null; code=$?; echo $code >&3; exit $code';
         }
 
         $envPairs = [];
         foreach ($env as $k => $v) {
             if (false !== $v && false === \in_array($k, ['argc', 'argv', 'ARGC', 'ARGV'], true)) {
-                $envPairs[] = $k.'='.$v;
+                $envPairs[] = $k . '=' . $v;
             }
         }
 
@@ -361,7 +367,7 @@ class Process implements \IteratorAggregate
 
             // Ensure array vs string commands behave the same
             if (!$process && \is_array($commandline)) {
-                $process = @proc_open('exec '.$this->buildShellCommandline($commandline), $descriptors, $this->processPipes->pipes, $this->cwd, $envPairs, $this->options);
+                $process = @proc_open('exec ' . $this->buildShellCommandline($commandline), $descriptors, $this->processPipes->pipes, $this->cwd, $envPairs, $this->options);
             }
         } finally {
             if ($this->ignoredSignals && \function_exists('pcntl_sigprocmask')) {
@@ -907,6 +913,8 @@ class Process implements \IteratorAggregate
      */
     public function stop(float $timeout = 10, ?int $signal = null): ?int
     {
+        $this->logger->info("Process ended.");
+
         $timeoutMicro = microtime(true) + $timeout;
         if ($this->isRunning()) {
             // given SIGTERM may not be defined and that "proc_terminate" uses the constant value and not the constant itself, we use the same here
@@ -1296,7 +1304,7 @@ class Process implements \IteratorAggregate
     protected function buildCallback(?callable $callback = null): \Closure
     {
         if ($this->outputDisabled) {
-            return fn ($type, $data): bool => null !== $callback && $callback($type, $data);
+            return fn($type, $data): bool => null !== $callback && $callback($type, $data);
         }
 
         $out = self::OUT;
@@ -1469,8 +1477,8 @@ class Process implements \IteratorAggregate
         $this->exitcode = null;
         $this->fallbackStatus = [];
         $this->processInformation = [];
-        $this->stdout = fopen('php://temp/maxmemory:'.(1024 * 1024), 'w+');
-        $this->stderr = fopen('php://temp/maxmemory:'.(1024 * 1024), 'w+');
+        $this->stdout = fopen('php://temp/maxmemory:' . (1024 * 1024), 'w+');
+        $this->stderr = fopen('php://temp/maxmemory:' . (1024 * 1024), 'w+');
         $this->process = null;
         $this->latestSignal = null;
         $this->status = self::STATUS_READY;
@@ -1571,23 +1579,23 @@ class Process implements \IteratorAggregate
                     $value = str_replace("\0", '?', $value);
                 }
                 if (false === strpbrk($value, "\"%!\n")) {
-                    return '"'.$value.'"';
+                    return '"' . $value . '"';
                 }
 
                 $value = str_replace(['!LF!', '"^!"', '"^%"', '"^^"', '""'], ["\n", '!', '%', '^', '"'], $value);
-                $value = '"'.preg_replace('/(\\\\*)"/', '$1$1\\"', $value).'"';
-                $var = $uid.++$varCount;
+                $value = '"' . preg_replace('/(\\\\*)"/', '$1$1\\"', $value) . '"';
+                $var = $uid . ++$varCount;
 
                 $env[$var] = $value;
 
-                return $varCache[$m[0]] = '!'.$var.'!';
+                return $varCache[$m[0]] = '!' . $var . '!';
             },
             $cmd
         );
 
-        $cmd = 'cmd /V:ON /E:ON /D /C ('.str_replace("\n", ' ', $cmd).')';
+        $cmd = 'cmd /V:ON /E:ON /D /C (' . str_replace("\n", ' ', $cmd) . ')';
         foreach ($this->processPipes->getFiles() as $offset => $filename) {
-            $cmd .= ' '.$offset.'>"'.$filename.'"';
+            $cmd .= ' ' . $offset . '>"' . $filename . '"';
         }
 
         return $cmd;
@@ -1626,7 +1634,7 @@ class Process implements \IteratorAggregate
             return '""';
         }
         if ('\\' !== \DIRECTORY_SEPARATOR) {
-            return "'".str_replace("'", "'\\''", $argument)."'";
+            return "'" . str_replace("'", "'\\''", $argument) . "'";
         }
         if (str_contains($argument, "\0")) {
             $argument = str_replace("\0", '?', $argument);
@@ -1636,14 +1644,14 @@ class Process implements \IteratorAggregate
         }
         $argument = preg_replace('/(\\\\+)$/', '$1$1', $argument);
 
-        return '"'.str_replace(['"', '^', '%', '!', "\n"], ['""', '"^^"', '"^%"', '"^!"', '!LF!'], $argument).'"';
+        return '"' . str_replace(['"', '^', '%', '!', "\n"], ['""', '"^^"', '"^%"', '"^!"', '!LF!'], $argument) . '"';
     }
 
     private function replacePlaceholders(string $commandline, array $env): string
     {
         return preg_replace_callback('/"\$\{:([_a-zA-Z]++[_a-zA-Z0-9]*+)\}"/', function ($matches) use ($commandline, $env) {
             if (!isset($env[$matches[1]]) || false === $env[$matches[1]]) {
-                throw new InvalidArgumentException(sprintf('Command line is missing a value for parameter "%s": ', $matches[1]).$commandline);
+                throw new InvalidArgumentException(sprintf('Command line is missing a value for parameter "%s": ', $matches[1]) . $commandline);
             }
 
             return $this->escapeArgument($env[$matches[1]]);
@@ -1656,5 +1664,25 @@ class Process implements \IteratorAggregate
         $env = ('\\' === \DIRECTORY_SEPARATOR ? array_intersect_ukey($env, $_SERVER, 'strcasecmp') : array_intersect_key($env, $_SERVER)) ?: $env;
 
         return $_ENV + ('\\' === \DIRECTORY_SEPARATOR ? array_diff_ukey($env, $_ENV, 'strcasecmp') : $env);
+    }
+
+    /**
+     * Retrieves the log messages stored in the logger.
+     *
+     * @return array An array of log messages.
+     */
+    public function getLogs()
+    {
+        return $this->logger->getLogs();
+    }
+
+    /**
+     * Clears all log messages stored in the logger.
+     *
+     * @return void
+     */
+    public function clearLogs()
+    {
+        $this->logger->clearLogs();
     }
 }
